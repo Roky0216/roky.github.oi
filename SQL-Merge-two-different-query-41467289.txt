@@ -1,0 +1,36 @@
+ SELECT COALESCE(TBL_1.clientet, TBL_2.clientet) as clientet
+    , TBL_1.nom
+    , TBL_1.recaudacionSINIVA
+    , TBL_1.cambiocargado
+    , TBL_1.CC_recaptacio
+    , TBL_1.visita
+    , TBL_1.CC_Caducados
+    , TBL_2.FACTURACION
+    , TBL_2.CC_facturacio
+ FROM
+
+      (SELECT cli.CLIENTE as clientet
+            , cli.RAZON as nom
+           , SUM(distinct par.[RECAPTACIO]*0.9) AS recaudacionSINIVA
+           , SUM(distinct par.canvi) as cambiocargado
+           , SUM(distinct par.consum) as CC_recaptacio
+           , count(distinct par.DATA) as visita
+           , SUM((c.quantitat + c.caixes * c.uxcaja) * c.pvp) as CC_Caducados     
+      FROM [V30].[dbo].[parmaq] as par,[V30].[dbo].[clientes] as cli , V30.dbo.parcons as c 
+           where cli.CLIENTE=par.EMPRESA and par.enllas=c.enllas
+           and par.data > '13-11-2015' and par.data < '20-11-2015'
+           group by cli.CLIENTE,cli.RAZON) TBL_1
+
+ FULL OUTER JOIN
+
+      (SELECT cli.cliente as clientet
+           , cli.RAZON
+           , SUM( distinct m1.IMPORTE) as FACTURACION
+           , SUM(distinct m2.coste * m2.canti) as CC_facturacio
+      FROM [V30].[dbo].[clientes] as cli, [V30].[dbo].[MESTA1] as m1,V30.dbo.MESTA2 as m2
+             where m2.albaran=m1.albaran and m1.CLIENTE=cli.CLIENTE 
+             and m1.FECHA > '13-11-2015' and m1.FECHA < '30-11-2015'  
+             group by cli.CLIENTE,cli.razon) TBL_2
+
+   ON TBL_1.clientet = TBL_2.clientet
+ ORDER BY COALESCE(TBL_1.clientet, TBL_2.clientet)
